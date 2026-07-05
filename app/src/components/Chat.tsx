@@ -2,10 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db'
 import { uid } from '../types'
-import { FRIEND_NAME } from '../config'
 import { cloudEnabled } from '../supabase'
 
-export default function Chat() {
+export default function Chat({ friendName }: { friendName: string }) {
   const [text, setText] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
   const messages = useLiveQuery(() => db.messages.orderBy('at').toArray(), [])
@@ -45,7 +44,7 @@ export default function Chat() {
       <div className="chat-inputbar">
         <div className="inner">
           <input
-            placeholder={`Message ${FRIEND_NAME}…`}
+            placeholder={`Message ${friendName}…`}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && send()}

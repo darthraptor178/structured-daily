@@ -1,24 +1,15 @@
 import { useEffect, useState } from 'react'
 import type { Task, Subtask } from '../types'
-import { TASK_COLORS, QUICK_ICONS, fmtTime } from '../types'
+import { TASK_COLORS, QUICK_ICONS, fmtTime, MAX_DURATION } from '../types'
 import { db } from '../db'
+import { DatePicker, TimePicker } from './pickers'
 
-const DURATIONS = [15, 30, 45, 60, 90, 120]
+const DURATIONS = [15, 30, 45, 60, 90, 120, 180, 240]
 
 interface Props {
   task: Task // draft (existing or new — new tasks have isNew)
   isNew: boolean
   onClose: () => void
-}
-
-function minToHHMM(min: number | null): string {
-  if (min == null) return ''
-  return `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`
-}
-function hhmmToMin(v: string): number | null {
-  if (!v) return null
-  const [h, m] = v.split(':').map(Number)
-  return h * 60 + m
 }
 
 export default function TaskSheet({ task, isNew, onClose }: Props) {
@@ -103,27 +94,20 @@ export default function TaskSheet({ task, isNew, onClose }: Props) {
           <div>
             <div className="field-label"><span className="msym" style={{ fontSize: 16 }}>schedule</span> Schedule</div>
             <div className="seg-row" style={{ alignItems: 'center' }}>
-              <input
-                className="time-input"
-                type="date"
-                value={draft.date ?? ''}
-                onChange={(e) => set({ date: e.target.value || null, startMin: e.target.value ? draft.startMin : null })}
+              <DatePicker
+                value={draft.date}
+                allowInbox
+                onChange={(iso) => set({ date: iso, startMin: iso === null ? null : draft.startMin })}
               />
-              {!isInbox && (
-                <>
-                  <input
-                    className="time-input"
-                    type="time"
-                    step={300}
-                    value={minToHHMM(draft.startMin)}
-                    onChange={(e) => set({ startMin: hhmmToMin(e.target.value) })}
-                  />
-                  <button className={`seg ${isAllDay ? 'on' : ''}`} onClick={() => set({ startMin: isAllDay ? 9 * 60 : null })}>
-                    All-day
-                  </button>
-                </>
+              {!isInbox && !isAllDay && (
+                <TimePicker value={draft.startMin ?? 9 * 60} onChange={(min) => set({ startMin: min })} />
               )}
-              {isInbox && <span style={{ color: 'var(--text-2)', fontSize: 13 }}>In inbox — pick a date to schedule</span>}
+              {!isInbox && (
+                <button type="button" className={`seg ${isAllDay ? 'on' : ''}`} onClick={() => set({ startMin: isAllDay ? 9 * 60 : null })}>
+                  All-day
+                </button>
+              )}
+              {isInbox && <span style={{ color: 'var(--text-2)', fontSize: 13 }}>Sits in the inbox until you pick a date</span>}
             </div>
           </div>
 

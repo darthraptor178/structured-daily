@@ -27,6 +27,9 @@ export interface ChatMessage {
   at: number
 }
 
+/** Hard cap on task length: 4 hours. */
+export const MAX_DURATION = 240
+
 export const TASK_COLORS = [
   { name: 'indigo', hex: '#6C5CE7' },
   { name: 'violet', hex: '#A06EE1' },

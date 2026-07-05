@@ -2,13 +2,14 @@ import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db'
 import type { Task } from '../types'
-import { uid, todayISO } from '../types'
+import { uid } from '../types'
 
 interface Props {
   onEdit: (t: Task) => void
+  onSchedule: (t: Task) => void
 }
 
-export default function Inbox({ onEdit }: Props) {
+export default function Inbox({ onEdit, onSchedule }: Props) {
   const [text, setText] = useState('')
   const items = useLiveQuery(
     () => db.tasks.where('userId').equals('me').filter((t) => t.date === null).sortBy('createdAt'),
@@ -23,14 +24,6 @@ export default function Inbox({ onEdit }: Props) {
       date: null, startMin: null, durationMin: 30, notes: '', subtasks: [], done: false, createdAt: Date.now(),
     })
     setText('')
-  }
-
-  const scheduleToday = async (t: Task) => {
-    // drop into the next round half-hour today
-    const now = new Date()
-    const nowMin = now.getHours() * 60 + now.getMinutes()
-    const start = Math.min(23 * 60, Math.ceil(nowMin / 30) * 30)
-    await db.tasks.update(t.id, { date: todayISO(), startMin: start })
   }
 
   return (
@@ -62,8 +55,8 @@ export default function Inbox({ onEdit }: Props) {
             </div>
           </div>
           <div className="actions">
-            <button className="iconbtn" title="Schedule today" onClick={() => scheduleToday(t)}>
-              <span className="msym">today</span>
+            <button className="pill accent" title="Pick a time today" onClick={() => onSchedule(t)}>
+              <span className="msym" style={{ fontSize: 15, verticalAlign: '-3px' }}>today</span> Schedule
             </button>
             <button className="iconbtn" title="Edit" onClick={() => onEdit(t)}>
               <span className="msym">edit</span>

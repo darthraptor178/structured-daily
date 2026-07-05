@@ -10,9 +10,10 @@ import Inbox from './components/Inbox'
 import Chat from './components/Chat'
 import Settings from './components/Settings'
 import Login from './components/Login'
-import { FRIEND_NAME } from './config'
+import { getNames } from './config'
 import { supabase, cloudEnabled } from './supabase'
 import { startSync, presenceStore } from './sync'
+import { DatePicker } from './components/pickers'
 
 type Tab = 'day' | 'inbox' | 'friend' | 'chat' | 'settings'
 
@@ -21,6 +22,11 @@ function newTask(date: string | null, startMin: number | null): Task {
     id: uid(), userId: 'me', title: '', icon: '📝', color: '#6C5CE7',
     date, startMin, durationMin: 45, notes: '', subtasks: [], done: false, createdAt: Date.now(),
   }
+}
+
+function nextSlot(): number {
+  const now = new Date()
+  return Math.min(23 * 60, Math.ceil((now.getHours() * 60 + now.getMinutes()) / 30) * 30)
 }
 
 function dateHeading(iso: string): { line1: string; line2: string } {
@@ -56,6 +62,8 @@ export default function App() {
     if (session?.user) startSync(session.user.id).catch((e) => console.error('[sync] start failed:', e))
   }, [session?.user?.id])
 
+  const friendName = getNames(session?.user?.email).friend
+
   const userId = tab === 'friend' ? 'friend' : 'me'
   const dayTasks = useLiveQuery(
     () => db.tasks.where('[userId+date]').equals([userId, date]).toArray(),
@@ -73,15 +81,13 @@ export default function App() {
   const readonly = tab === 'friend'
 
   const openNew = (startMin: number | null = null) => {
-    const now = new Date()
-    const defStart = startMin ?? Math.min(23 * 60, Math.ceil((now.getHours() * 60 + now.getMinutes()) / 30) * 30)
-    setEditing({ task: newTask(date, defStart), isNew: true })
+    setEditing({ task: newTask(date, startMin ?? nextSlot()), isNew: true })
   }
 
   const navItems: { key: Tab; icon: string; label: string }[] = [
     { key: 'day', icon: 'event_note', label: 'My Day' },
     { key: 'inbox', icon: 'inbox', label: 'Inbox' },
-    { key: 'friend', icon: 'person', label: FRIEND_NAME },
+    { key: 'friend', icon: 'person', label: friendName },
     { key: 'chat', icon: 'chat_bubble', label: 'Chat' },
     { key: 'settings', icon: 'settings', label: 'Settings' },
   ]
@@ -123,19 +129,24 @@ export default function App() {
             <header className="topbar">
               {tab === 'friend' && (
                 <div className="avatar" aria-hidden>
-                  {FRIEND_NAME[0]}
+                  {friendName[0]}
                   {(!cloudEnabled || friendOnline) && <span className="presence" />}
                 </div>
               )}
               <div>
-                <h1>{tab === 'friend' ? `${FRIEND_NAME}'s day` : heading.line1}</h1>
+                <h1>{tab === 'friend' ? `${friendName}'s day` : heading.line1}</h1>
                 <div className="sub">{heading.line2}</div>
               </div>
               <div className="topbar-spacer" />
+              {!isToday && (
+                <button className="pill accent" onClick={() => setDate(todayISO())}>
+                  Back to today
+                </button>
+              )}
               <button className="iconbtn" onClick={() => setDate(shiftISO(date, -1))} aria-label="Previous day">
                 <span className="msym">chevron_left</span>
               </button>
-              <button className={`pill ${isToday ? 'accent' : ''}`} onClick={() => setDate(todayISO())}>Today</button>
+              <DatePicker value={date} align="right" onChange={(iso) => iso && setDate(iso)} />
               <button className="iconbtn" onClick={() => setDate(shiftISO(date, 1))} aria-label="Next day">
                 <span className="msym">chevron_right</span>
               </button>
@@ -145,8 +156,8 @@ export default function App() {
               <div className="banner">
                 <span className="msym" style={{ fontSize: 16 }}>visibility</span>
                 {cloudEnabled
-                  ? `Viewing ${FRIEND_NAME}'s schedule — updates live`
-                  : `Viewing ${FRIEND_NAME}'s schedule (demo data) — connect Supabase to go live`}
+                  ? `Viewing ${friendName}'s schedule — updates live`
+                  : `Viewing ${friendName}'s schedule (demo data) — connect Supabase to go live`}
               </div>
             )}
 
@@ -193,7 +204,10 @@ export default function App() {
             <header className="topbar">
               <div><h1>Inbox</h1><div className="sub">Unscheduled tasks</div></div>
             </header>
-            <Inbox onEdit={(t) => setEditing({ task: t, isNew: false })} />
+            <Inbox
+              onEdit={(t) => setEditing({ task: t, isNew: false })}
+              onSchedule={(t) => setEditing({ task: { ...t, date: todayISO(), startMin: nextSlot() }, isNew: false })}
+            />
           </>
         )}
 
@@ -201,15 +215,15 @@ export default function App() {
           <>
             <header className="topbar">
               <div className="avatar" aria-hidden>
-                {FRIEND_NAME[0]}
+                {friendName[0]}
                 {(!cloudEnabled || friendOnline) && <span className="presence" />}
               </div>
               <div>
-                <h1>{FRIEND_NAME}</h1>
+                <h1>{friendName}</h1>
                 <div className="sub">{!cloudEnabled ? 'Demo' : friendOnline ? 'Online' : 'Offline'}</div>
               </div>
             </header>
-            <Chat />
+            <Chat friendName={friendName} />
           </>
         )}
 

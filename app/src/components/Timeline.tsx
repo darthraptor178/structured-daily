@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Task } from '../types'
-import { fmtRange, fmtTime, todayISO } from '../types'
+import { fmtRange, fmtTime, todayISO, MAX_DURATION } from '../types'
 
 const PX_PER_MIN = 1
 const SNAP = 5
@@ -104,7 +104,7 @@ export default function Timeline({ tasks, date, readonly, onEdit, onToggle, onMo
         } else {
           const raw = d.origDur + d.delta / PX_PER_MIN
           const snapped = Math.max(SNAP, Math.round(raw / SNAP) * SNAP)
-          const clamped = Math.min(DAY_MIN - d.origStart, snapped)
+          const clamped = Math.min(MAX_DURATION, DAY_MIN - d.origStart, snapped)
           onResize?.(d.task, clamped)
         }
       } else if (d.mode === 'move') {
