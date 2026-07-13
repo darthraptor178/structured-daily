@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import type { Task, Subtask } from '../types'
+import type { Task, Subtask, Recurrence } from '../types'
 import { TASK_COLORS, QUICK_ICONS, fmtTime, MAX_DURATION } from '../types'
 import { db } from '../db'
 import { DatePicker, TimePicker } from './pickers'
+import { parseSmartTask } from '../taskInput'
 
 const DURATIONS = [15, 30, 45, 60, 90, 120, 180, 240]
 
@@ -18,6 +19,16 @@ export default function TaskSheet({ task, isNew, onClose }: Props) {
   const [newSub, setNewSub] = useState('')
 
   const set = (patch: Partial<Task>) => setDraft((d) => ({ ...d, ...patch }))
+
+  const applySmartInput = () => {
+    const parsed = parseSmartTask(draft.title)
+    if (parsed.durationMin === undefined && parsed.startMin === undefined) return
+    set({
+      title: parsed.title || draft.title,
+      durationMin: parsed.durationMin ?? draft.durationMin,
+      startMin: parsed.startMin ?? draft.startMin,
+    })
+  }
 
   const save = async () => {
     const final = { ...draft, title: draft.title.trim() || 'Untitled' }
@@ -60,8 +71,10 @@ export default function TaskSheet({ task, isNew, onClose }: Props) {
               value={draft.title}
               autoFocus={isNew}
               onChange={(e) => set({ title: e.target.value })}
+              onBlur={applySmartInput}
             />
           </div>
+          <div className="smart-hint"><span className="msym">auto_awesome</span> Try “Study 1h 12:30 pm” — time and duration fill automatically.</div>
 
           {showIcons && (
             <div>
@@ -124,6 +137,31 @@ export default function TaskSheet({ task, isNew, onClose }: Props) {
               {draft.startMin != null && (
                 <div style={{ marginTop: 8, fontSize: 13, color: 'var(--text-2)' }}>
                   {fmtTime(draft.startMin)} → {fmtTime(draft.startMin + draft.durationMin)}
+                </div>
+              )}
+            </div>
+          )}
+
+          {!isInbox && (
+            <div>
+              <div className="field-label"><span className="msym" style={{ fontSize: 16 }}>repeat</span> Repeat</div>
+              <div className="seg-row">
+                <button className={`seg ${!draft.recurrence ? 'on' : ''}`} onClick={() => set({ recurrence: undefined })}>Does not repeat</button>
+                <button className={`seg ${draft.recurrence?.frequency === 'daily' ? 'on' : ''}`} onClick={() => set({ recurrence: { frequency: 'daily' } })}>Every day</button>
+                <button className={`seg ${draft.recurrence?.frequency === 'weekly' && draft.recurrence.days?.length === 5 ? 'on' : ''}`} onClick={() => set({ recurrence: { frequency: 'weekly', days: [1, 2, 3, 4, 5] } })}>Weekdays</button>
+                <button className={`seg ${draft.recurrence?.frequency === 'weekly' && draft.recurrence.days?.length !== 5 ? 'on' : ''}`} onClick={() => set({ recurrence: { frequency: 'weekly', days: [new Date((draft.date ?? '2000-01-02') + 'T12:00:00').getDay()] } })}>Custom days</button>
+              </div>
+              {draft.recurrence?.frequency === 'weekly' && (
+                <div className="repeat-days" aria-label="Days the task repeats">
+                  {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((label, day) => {
+                    const days = draft.recurrence?.days ?? []
+                    const selected = days.includes(day)
+                    return <button key={day} type="button" className={selected ? 'on' : ''} onClick={() => {
+                      const next = selected ? days.filter((d) => d !== day) : [...days, day]
+                      const recurrence: Recurrence = { frequency: 'weekly', days: next.length ? next : [day] }
+                      set({ recurrence })
+                    }}>{label}</button>
+                  })}
                 </div>
               )}
             </div>

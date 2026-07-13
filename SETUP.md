@@ -17,6 +17,13 @@ login/sync/chat between devices).
 2. Paste the entire contents of [`supabase/schema.sql`](supabase/schema.sql) → **Run**.
    You should see "Success. No rows returned".
 
+### Updating an existing project
+
+If you created the tables before the recurring-task and chat-read-receipt update,
+run [`supabase/migrations/20260713_recurring_tasks_and_read_receipts.sql`](supabase/migrations/20260713_recurring_tasks_and_read_receipts.sql)
+once in the SQL Editor. This adds the fields required for recurring occurrences,
+unread counts, and “Seen at” timestamps.
+
 ## 3. Create the two accounts (~2 min)
 
 1. Left sidebar → **Authentication** → **Users** → **Add user** → **Create new user**.

@@ -14,6 +14,8 @@ create table public.tasks (
   notes text not null default '',
   subtasks jsonb not null default '[]',
   done boolean not null default false,
+  recurrence jsonb,
+  recurrence_parent_id text references public.tasks (id) on delete cascade,
   created_at bigint not null
 );
 
@@ -36,7 +38,8 @@ create table public.messages (
   id text primary key,
   sender uuid not null references auth.users (id) on delete cascade,
   text text not null,
-  at bigint not null
+  at bigint not null,
+  read_at bigint
 );
 
 alter table public.messages enable row level security;
@@ -45,6 +48,14 @@ create policy "messages readable by any signed-in user"
   on public.messages for select to authenticated using (true);
 create policy "send as yourself"
   on public.messages for insert to authenticated with check (sender = auth.uid());
+
+-- Recipients can only set a message read receipt; column privileges prevent
+-- them from changing the message body or sender.
+revoke update on public.messages from authenticated;
+grant update (read_at) on public.messages to authenticated;
+create policy "mark received messages read"
+  on public.messages for update to authenticated
+  using (sender <> auth.uid()) with check (sender <> auth.uid());
 
 -- ── Realtime ─────────────────────────────────────────────────
 alter publication supabase_realtime add table public.tasks;

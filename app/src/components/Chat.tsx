@@ -13,6 +13,11 @@ export default function Chat({ friendName }: { friendName: string }) {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
   }, [messages?.length])
 
+  useEffect(() => {
+    const unread = messages?.filter((m) => m.from === 'friend' && m.readAt === undefined) ?? []
+    if (unread.length) Promise.all(unread.map((m) => db.messages.update(m.id, { readAt: Date.now() })))
+  }, [messages])
+
   const send = async () => {
     const t = text.trim()
     if (!t) return
@@ -30,16 +35,23 @@ export default function Chat({ friendName }: { friendName: string }) {
       )}
       <div className="chat-scroll" ref={scrollRef}>
         {messages && messages.length === 0 && <div className="empty">Say hi 👋</div>}
-        {messages?.map((m) => (
-          <div key={m.id} className={`bubble-row ${m.from}`}>
+        {messages?.map((m, i) => {
+          const previous = messages[i - 1]
+          const day = new Date(m.at).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+          const previousDay = previous && new Date(previous.at).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+          return <div key={m.id}>
+            {day !== previousDay && <div className="chat-day">{day}</div>}
+            <div className={`bubble-row ${m.from}`}>
             <div className="bubble">
               {m.text}
               <div className="bubble-time">
                 {new Date(m.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {m.from === 'me' && <span className={`read-state ${m.readAt ? 'seen' : ''}`}><span className="msym">done_all</span>{m.readAt ? ` Seen ${new Date(m.readAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ' Sent'}</span>}
               </div>
             </div>
+            </div>
           </div>
-        ))}
+        })}
       </div>
       <div className="chat-inputbar">
         <div className="inner">

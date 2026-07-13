@@ -3,6 +3,12 @@ export interface Subtask {
   done: boolean
 }
 
+export interface Recurrence {
+  /** Daily, weekdays, or specific days of the week (0 = Sunday). */
+  frequency: 'daily' | 'weekly'
+  days?: number[]
+}
+
 export interface Task {
   id: string
   userId: 'me' | 'friend'
@@ -18,6 +24,9 @@ export interface Task {
   subtasks: Subtask[]
   done: boolean
   createdAt: number
+  /** Only set on the template task; occurrences are independent tasks. */
+  recurrence?: Recurrence
+  recurrenceParentId?: string
 }
 
 export interface ChatMessage {
@@ -25,6 +34,8 @@ export interface ChatMessage {
   from: 'me' | 'friend'
   text: string
   at: number
+  /** When the other person opened this message. */
+  readAt?: number
 }
 
 /** Hard cap on task length: 4 hours. */

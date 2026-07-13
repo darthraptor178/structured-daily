@@ -611,6 +611,11 @@ textarea.notes {
   resize: vertical;
 }
 textarea.notes:focus { outline: none; border-color: var(--accent); }
+.smart-hint { color: var(--text-2); font-size: 12px; display: flex; gap: 6px; align-items: center; margin-top: -12px; }
+.smart-hint .msym { color: var(--accent-text); font-size: 15px; }
+.repeat-days { display: flex; gap: 7px; margin-top: 10px; }
+.repeat-days button { width: 30px; height: 30px; border-radius: 50%; color: var(--text-2); background: var(--surface-3); font-size: 12px; font-weight: 700; }
+.repeat-days button.on { color: white; background: var(--accent); box-shadow: 0 3px 10px rgba(108, 92, 231, 0.35); }
 
 .sheet-footer {
   display: flex;
@@ -737,6 +742,9 @@ textarea.notes:focus { outline: none; border-color: var(--accent); }
   border-bottom-left-radius: 6px;
 }
 .bubble-time { font-size: 10.5px; opacity: 0.65; margin-top: 3px; text-align: right; font-variant-numeric: tabular-nums; }
+.read-state { display: inline-flex; align-items: center; gap: 2px; margin-left: 6px; }
+.read-state .msym { font-size: 13px; }
+.read-state.seen { opacity: 1; }
 .chat-inputbar { padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); flex-shrink: 0; }
 .chat-inputbar .inner {
   display: flex;

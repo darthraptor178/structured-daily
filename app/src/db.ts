@@ -12,6 +12,10 @@ class StructuredDB extends Dexie {
       tasks: 'id, userId, date, [userId+date]',
       messages: 'id, at',
     })
+    this.version(2).stores({
+      tasks: 'id, userId, date, [userId+date], recurrenceParentId',
+      messages: 'id, at, from, readAt',
+    })
   }
 }
 

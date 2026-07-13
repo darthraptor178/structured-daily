@@ -14,6 +14,7 @@ import Login from './components/Login'
 import { getNames } from './config'
 import { supabase, cloudEnabled } from './supabase'
 import { startSync, presenceStore } from './sync'
+import { materializeRecurringForDate } from './recurrence'
 import { DatePicker } from './components/pickers'
 
 type Tab = 'day' | 'inbox' | 'friend' | 'chat' | 'settings'
@@ -75,6 +76,12 @@ export default function App() {
     () => db.tasks.where('userId').equals('me').filter((t) => t.date === null).count(),
     [],
   )
+  const unreadCount = useLiveQuery(
+    () => db.messages.filter((m) => m.from === 'friend' && m.readAt === undefined).count(),
+    [],
+  )
+
+  useEffect(() => { materializeRecurringForDate(date).catch((e) => console.error('[recurrence] failed:', e)) }, [date])
 
   const timed = useMemo(() => (dayTasks ?? []).filter((t) => t.startMin !== null), [dayTasks])
   const allDay = useMemo(() => (dayTasks ?? []).filter((t) => t.startMin === null), [dayTasks])
@@ -107,6 +114,7 @@ export default function App() {
       <span className={`msym ${tab === item.key ? 'fill' : ''}`}>{item.icon}</span>
       <span className="label">{item.label}</span>
       {item.key === 'inbox' && (inboxCount ?? 0) > 0 && <span className="badge">{inboxCount}</span>}
+      {item.key === 'chat' && (unreadCount ?? 0) > 0 && <span className="badge">{unreadCount}</span>}
       {item.key === 'friend' && (!cloudEnabled || friendOnline) && <span className="presence" />}
     </button>
   )

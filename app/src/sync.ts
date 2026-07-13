@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
 import { db } from './db'
-import type { Task, ChatMessage } from './types'
+import type { Task, ChatMessage, Recurrence } from './types'
 
 /**
  * Sync layer: Dexie stays the UI's source of truth (offline-first, instant),
@@ -29,8 +29,10 @@ type TaskRow = {
   subtasks: { text: string; done: boolean }[]
   done: boolean
   created_at: number
+  recurrence?: Recurrence | null
+  recurrence_parent_id?: string | null
 }
-type MessageRow = { id: string; sender: string; text: string; at: number }
+type MessageRow = { id: string; sender: string; text: string; at: number; read_at?: number | null }
 
 const toLocalTask = (r: TaskRow): Task => ({
   id: r.id,
@@ -45,6 +47,8 @@ const toLocalTask = (r: TaskRow): Task => ({
   subtasks: r.subtasks ?? [],
   done: r.done,
   createdAt: r.created_at,
+  recurrence: r.recurrence ?? undefined,
+  recurrenceParentId: r.recurrence_parent_id ?? undefined,
 })
 
 const toRowTask = (t: Task): TaskRow => ({
@@ -60,6 +64,8 @@ const toRowTask = (t: Task): TaskRow => ({
   subtasks: t.subtasks,
   done: t.done,
   created_at: t.createdAt,
+  recurrence: t.recurrence ?? null,
+  recurrence_parent_id: t.recurrenceParentId ?? null,
 })
 
 const toLocalMsg = (r: MessageRow): ChatMessage => ({
@@ -67,6 +73,7 @@ const toLocalMsg = (r: MessageRow): ChatMessage => ({
   from: r.sender === myUid ? 'me' : 'friend',
   text: r.text,
   at: r.at,
+  readAt: r.read_at ?? undefined,
 })
 
 async function applyLocally(fn: () => Promise<unknown>) {
@@ -97,8 +104,15 @@ function registerHooks() {
   db.messages.hook('creating', (_pk, obj) => {
     const m = obj as ChatMessage
     if (applyingRemote || m.from !== 'me') return
-    supabase!.from('messages').insert({ id: m.id, sender: myUid, text: m.text, at: m.at })
+    supabase!.from('messages').insert({ id: m.id, sender: myUid, text: m.text, at: m.at, read_at: null })
       .then(({ error }) => { if (error) console.error('[sync] message push failed:', error.message) })
+  })
+  db.messages.hook('updating', (mods, pk, obj) => {
+    const message = obj as ChatMessage
+    const changes = mods as Partial<ChatMessage>
+    if (applyingRemote || message.from !== 'friend' || changes.readAt === undefined) return
+    supabase!.from('messages').update({ read_at: changes.readAt }).eq('id', pk as string)
+      .then(({ error }) => { if (error) console.error('[sync] read receipt failed:', error.message) })
   })
 }
 
@@ -131,7 +145,7 @@ function subscribeRealtime() {
         }
       })
     })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, (payload) => {
       applyLocally(() => db.messages.put(toLocalMsg(payload.new as MessageRow)))
     })
     .subscribe()
