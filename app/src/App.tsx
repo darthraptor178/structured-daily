@@ -7,6 +7,7 @@ import { todayISO, shiftISO, uid } from './types'
 import Timeline from './components/Timeline'
 import TaskSheet from './components/TaskSheet'
 import Inbox from './components/Inbox'
+import FocusNow from './components/FocusNow'
 import Chat from './components/Chat'
 import Settings from './components/Settings'
 import Login from './components/Login'
@@ -44,6 +45,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('day')
   const [date, setDate] = useState(todayISO)
   const [editing, setEditing] = useState<{ task: Task; isNew: boolean } | null>(null)
+  const [focusOpen, setFocusOpen] = useState(false)
   const [session, setSession] = useState<Session | null>(null)
   const [authReady, setAuthReady] = useState(!cloudEnabled)
   const friendOnline = useSyncExternalStore(presenceStore.subscribe, presenceStore.isFriendOnline)
@@ -79,6 +81,10 @@ export default function App() {
   const heading = dateHeading(date)
   const isToday = date === todayISO()
   const readonly = tab === 'friend'
+  const nowM = new Date().getHours() * 60 + new Date().getMinutes()
+  const liveNow =
+    tab === 'day' && isToday &&
+    timed.some((t) => !t.done && t.startMin! <= nowM && nowM < t.startMin! + t.durationMin)
 
   const openNew = (startMin: number | null = null) => {
     setEditing({ task: newTask(date, startMin ?? nextSlot()), isNew: true })
@@ -138,6 +144,13 @@ export default function App() {
                 <div className="sub">{heading.line2}</div>
               </div>
               <div className="topbar-spacer" />
+              {tab === 'day' && isToday && (
+                <button className="pill focus-pill" onClick={() => setFocusOpen(true)}>
+                  <span className="msym" style={{ fontSize: 16 }}>timer</span>
+                  Focus
+                  {liveNow && <span className="live-dot" />}
+                </button>
+              )}
               {!isToday && (
                 <button className="pill accent" onClick={() => setDate(todayISO())}>
                   Back to today
@@ -246,6 +259,8 @@ export default function App() {
       <nav className="bottomnav">
         {navItems.map((i) => <NavBtn key={i.key} item={i} />)}
       </nav>
+
+      {focusOpen && <FocusNow onClose={() => setFocusOpen(false)} />}
 
       {editing && (
         <TaskSheet
