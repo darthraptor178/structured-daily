@@ -5,6 +5,12 @@ import { db } from '../db'
 import { todayISO, fmtTime, MAX_DURATION } from '../types'
 
 const PRESETS = [10, 15, 25, 45, 60]
+const THEMES = [
+  { id: 'dusk', label: 'Dusk', color: '#c4865f' },
+  { id: 'night', label: 'Night', color: '#7089d8' },
+  { id: 'mist', label: 'Mist', color: '#6cae9e' },
+] as const
+type Theme = (typeof THEMES)[number]['id']
 
 function nowMinutes(): number {
   const d = new Date()
@@ -117,6 +123,8 @@ export default function FocusNow({ onClose }: { onClose: () => void }) {
 
   // Freeform session state
   const [preset, setPreset] = useState(25)
+  const [theme, setTheme] = useState<Theme>('dusk')
+  const [ambient, setAmbient] = useState(false)
   const [session, setSession] = useState<{ endAt: number; totalSec: number } | null>(null)
   const [pausedLeft, setPausedLeft] = useState<number | null>(null)
   const [timerDone, setTimerDone] = useState(false)
@@ -192,16 +200,54 @@ export default function FocusNow({ onClose }: { onClose: () => void }) {
   const color = task ? task.color : '#6c5ce7'
 
   return (
-    <div className="focus-screen" style={{ '--fc': color } as CSSProperties}>
+    <div className={`focus-screen focus-${theme} ${ambient ? 'ambient' : ''}`} style={{ '--fc': color } as CSSProperties}>
       <div className="focus-bg" aria-hidden>
+        <div className="focus-grain" />
+        <div className="focus-orbital" />
         <div className="fblob a" />
         <div className="fblob b" />
         <div className="fblob c" />
       </div>
 
-      <button className="iconbtn focus-close" onClick={onClose} aria-label="Exit focus">
-        <span className="msym">close</span>
-      </button>
+      <header className="focus-topbar">
+        <div className="focus-wordmark"><span className="focus-wordmark-dot" /> Structured <span>/ Focus</span></div>
+        <div className="focus-top-actions">
+          <div className="focus-themes" aria-label="Focus theme">
+            {THEMES.map((item) => (
+              <button key={item.id} className={theme === item.id ? 'on' : ''} onClick={() => setTheme(item.id)} aria-label={`${item.label} theme`} title={item.label}>
+                <span style={{ background: item.color }} />
+              </button>
+            ))}
+          </div>
+          <button className={`focus-ambient-toggle ${ambient ? 'on' : ''}`} onClick={() => setAmbient((value) => !value)}>
+            <span className="msym">{ambient ? 'dashboard' : 'filter_center_focus'}</span>{ambient ? 'Dashboard' : 'Ambient'}
+          </button>
+          <button className="iconbtn focus-close" onClick={onClose} aria-label="Exit focus"><span className="msym">close</span></button>
+        </div>
+      </header>
+
+      {!ambient && (
+        <aside className="focus-side" aria-label="Focus context">
+          <div className="focus-side-kicker">TODAY&rsquo;S FLOW</div>
+          {task ? (
+            <div className="focus-current-card">
+              <span className="focus-card-label">NOW</span>
+              <div><span className="focus-card-emoji">{task.icon}</span> {task.title || 'Untitled task'}</div>
+              <small>{fmtTime(task.startMin!)} – {fmtTime(taskEnd)}</small>
+            </div>
+          ) : (
+            <div className="focus-current-card empty-card"><span className="focus-card-label">NOW</span><div>Make space for one thing.</div></div>
+          )}
+          {upNext && (
+            <div className="focus-next-card">
+              <span>UP NEXT</span>
+              <div>{upNext.icon} {upNext.title || 'Untitled'}</div>
+              <small>{fmtTime(upNext.startMin!)}</small>
+            </div>
+          )}
+          <p className="focus-note">Small, intentional sessions add up.</p>
+        </aside>
+      )}
 
       <div className="focus-center">
         {task ? (
