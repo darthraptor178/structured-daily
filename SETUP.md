@@ -82,7 +82,7 @@ supabase functions deploy plan-day --project-ref your_project_ref
 
 Create keys in Google AI Studio and keep their values out of the Vite environment,
 Git, and migration files. The function authenticates the caller and retrieves
-only that user's encrypted Vault key. It uses `gemini-2.5-flash-lite`, which has
+only that user's encrypted Vault key. It uses `gemini-3.1-flash-lite`, which has
 a free API tier with usage limits. Requests on the free tier may be used by Google
 to improve its products, so only enable it if that data handling is acceptable.
 

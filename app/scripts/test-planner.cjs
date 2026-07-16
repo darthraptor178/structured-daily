@@ -39,4 +39,13 @@ assert.equal(planDayLocally('6-8 presentation', '2026-07-16', 540, [])[0].startM
 const existing = [{ date: '2026-07-16', startMin: 540, durationMin: 60 }]
 assert.equal(planDayLocally('Write for 30 min', '2026-07-16', 540, existing)[0].startMin, 600)
 
-console.log('Planner parser: 6 scenarios passed')
+const reportedParagraph = 'for tomorrow i need an hour to make changes to ppt and 45 mins to make changes to latex report. i also need 45 mins to organise stuff and get ready in morning, after i wake up at 8 AM. I also have a meet 6-8 PM tomorrow evening and all hands 9-10:30pm'
+assert.deepEqual(compact(planDayLocally(reportedParagraph, '2026-07-16', 540, [])).map(({ title, date, startMin, durationMin }) => ({ title, date, startMin, durationMin })), [
+  { title: 'make changes to ppt', date: '2026-07-17', startMin: 540, durationMin: 60 },
+  { title: 'make changes to latex report', date: '2026-07-17', startMin: 600, durationMin: 45 },
+  { title: 'organise stuff and get ready', date: '2026-07-17', startMin: 480, durationMin: 45 },
+  { title: 'Meeting', date: '2026-07-17', startMin: 1080, durationMin: 120 },
+  { title: 'all hands', date: '2026-07-17', startMin: 1260, durationMin: 90 },
+])
+
+console.log('Planner parser: 7 scenarios passed')

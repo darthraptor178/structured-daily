@@ -33,6 +33,7 @@ export default function PlanDay({ date, defaultStart, existingTasks, onClose }: 
     setLoading(true)
     setNotice('')
     let next: PlannedTask[] = []
+    let aiFailure = ''
     if (cloudEnabled && supabase) {
       const { data, error } = await supabase.functions.invoke('plan-day', {
         body: {
@@ -42,12 +43,19 @@ export default function PlanDay({ date, defaultStart, existingTasks, onClose }: 
         },
       })
       if (!error) next = normalizeAIPlan(data, date, existingTasks)
+      else {
+        aiFailure = 'The AI service could not make a plan'
+        try {
+          const details = await error.context?.json()
+          if (typeof details?.error === 'string') aiFailure = details.error
+        } catch { /* The fallback below remains available. */ }
+      }
     }
     if (!next.length) {
       next = planDayLocally(input, date, defaultStart, existingTasks)
-      setNotice('Quick planning mode used. Add the free AI key for better understanding of flexible requests.')
+      setNotice(`${aiFailure ? `${aiFailure}. ` : ''}Quick planning mode used—review times before adding.`)
     } else {
-      setNotice('Planned with Gemini 2.5 Flash-Lite.')
+      setNotice('Planned with Gemini 3.1 Flash-Lite.')
     }
     setPlan(next)
     setLoading(false)

@@ -27,10 +27,14 @@ function lookFor(title: string) {
 }
 
 function parseDuration(text: string) {
-  const match = /\b(?:(\d+(?:\.\d+)?)\s*(?:h|hr|hrs|hour|hours)(?:\s*(\d+)\s*(?:m|min|mins|minutes?))?|(\d+)\s*(?:m|min|mins|minutes?))\b/i.exec(text)
-  if (!match) return { durationMin: undefined, text }
+  const normalized = text
+    .replace(/\b(?:an?|one)\s+hours?\b/gi, '1 hour')
+    .replace(/\btwo\s+hours?\b/gi, '2 hours')
+    .replace(/\bhalf\s+(?:an?\s+)?hour\b/gi, '30 minutes')
+  const match = /\b(?:(\d+(?:\.\d+)?)\s*(?:h|hr|hrs|hour|hours)(?:\s*(\d+)\s*(?:m|min|mins|minutes?))?|(\d+)\s*(?:m|min|mins|minutes?))\b/i.exec(normalized)
+  if (!match) return { durationMin: undefined, text: normalized }
   const durationMin = Math.min(MAX_DURATION, Math.max(5, Math.round(Number(match[1] ?? 0) * 60 + Number(match[2] ?? match[3] ?? 0))))
-  return { durationMin, text: `${text.slice(0, match.index)} ${text.slice(match.index + match[0].length)}` }
+  return { durationMin, text: `${normalized.slice(0, match.index)} ${normalized.slice(match.index + match[0].length)}` }
 }
 
 function hourToMinutes(hourText: string, minuteText?: string, meridiem?: string, hint = '') {
@@ -68,13 +72,32 @@ function parseStart(text: string) {
 }
 
 function cleanTitle(text: string) {
-  return text
+  const cleaned = text
     .replace(/^\s*(?:[-*•]|\d+[.)])\s*/, '')
+    .replace(/^\s*(?:for\s+)?(?:today|tomorrow)\s+(?:i\s+)?(?:also\s+)?(?:need|have)\s+(?:to\s+)?/i, '')
+    .replace(/^\s*i\s+(?:also\s+)?(?:need|have)\s+(?:to\s+)?/i, '')
+    .replace(/^\s*(?:need\s+to|to)\s+/i, '')
     .replace(/\b(?:today|tomorrow|morning|afternoon|evening|tonight)\b/gi, '')
+    .replace(/\s*,?\s*after\s+i\s+wake\s+up\s*$/i, '')
+    .replace(/\s+in\s*(?=[,.:]|$)/i, '')
+    .replace(/\s+for\s*$/i, '')
     .replace(/^\s*(?:and\s+)?(?:then\s+)?/i, '')
     .replace(/\s{2,}/g, ' ')
     .replace(/^[,.:\s-]+|[,.:\s-]+$/g, '')
     .trim()
+
+  return /^a meet$/i.test(cleaned) ? 'Meeting' : cleaned
+}
+
+function splitTaskChunks(input: string) {
+  const clauses = input
+    .replace(/\r/g, '')
+    .replace(/(?<!\d)[.!?]+\s+(?=[A-Za-z0-9])/g, '\n')
+    .split(/\n+|\s*;\s*|\s*,\s*(?=(?:then\s+)?(?:\d+(?:\.\d+)?\s*(?:h|hr|m|min)|\d+[.)]))|\s+then\s+/i)
+    .flatMap((part) => part.split(/\s+and\s+(?=(?:(?:an?|one|two|half|\d+(?:\.\d+)?)\s*(?:h|hr|hrs|hours?|m|min|mins|minutes?))|(?:[^,.;]{0,48}\b\d{1,2}(?::\d{2})?\s*(?:-|–|—|to)\s*\d{1,2}))/i))
+    .map((part) => part.trim())
+    .filter(Boolean)
+  return clauses
 }
 
 function overlaps(startMin: number, durationMin: number, task: Pick<Task, 'startMin' | 'durationMin'> | PlannedTask) {
@@ -84,26 +107,31 @@ function overlaps(startMin: number, durationMin: number, task: Pick<Task, 'start
 /** Fast, no-network planner used when the optional AI service is unavailable. */
 export function planDayLocally(input: string, date: string, defaultStart: number, existing: Task[] = []): PlannedTask[] {
   const targetDate = /\btomorrow\b/i.test(input) ? shiftISO(date, 1) : date
-  const chunks = input
-    .replace(/\r/g, '')
-    .split(/\n+|\s*;\s*|\s*,\s*(?=(?:then\s+)?(?:\d+(?:\.\d+)?\s*(?:h|hr|m|min)|\d+[.)]))|\s+then\s+/i)
-    .map((part) => part.trim())
-    .filter(Boolean)
+  const chunks = splitTaskChunks(input)
+
+  const specs = chunks.map((chunk) => {
+    const range = parseRange(chunk)
+    const duration = parseDuration(range.text)
+    const start = parseStart(duration.text)
+    return {
+      title: cleanTitle(start.text) || 'Untitled task',
+      durationMin: range.durationMin ?? duration.durationMin ?? 45,
+      explicitStart: range.startMin ?? start.startMin,
+    }
+  })
+
+  const fixed = specs
+    .filter((spec) => spec.explicitStart !== undefined)
+    .map((spec) => ({ date: targetDate, startMin: spec.explicitStart!, durationMin: spec.durationMin }))
 
   let cursor = Math.max(0, Math.min(defaultStart, 23 * 60))
   const planned: PlannedTask[] = []
 
-  for (const chunk of chunks) {
-    const range = parseRange(chunk)
-    const duration = parseDuration(range.text)
-    const start = parseStart(duration.text)
-    const title = cleanTitle(start.text) || 'Untitled task'
-    const durationMin = range.durationMin ?? duration.durationMin ?? 45
-    const explicitStart = range.startMin ?? start.startMin
+  for (const { title, durationMin, explicitStart } of specs) {
     let startMin = explicitStart ?? cursor
 
     if (explicitStart === undefined) {
-      while ([...existing, ...planned].some((task) => task.date === targetDate && overlaps(startMin, durationMin, task))) {
+      while ([...existing, ...fixed, ...planned].some((task) => task.date === targetDate && overlaps(startMin, durationMin, task))) {
         startMin += 15
       }
     }
