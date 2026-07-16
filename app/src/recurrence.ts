@@ -1,6 +1,7 @@
 import { db } from './db'
 import type { Task } from './types'
 import { taskOccursOn } from './recurrenceRules'
+import { telegramReminderTimestamp } from './telegram'
 
 /** Create durable, independently completable occurrences when a day is opened. */
 export async function materializeRecurringForDate(iso: string) {
@@ -14,6 +15,8 @@ export async function materializeRecurringForDate(iso: string) {
       done: false,
       recurrence: undefined,
       recurrenceParentId: task.id,
+      telegramRemindAt: telegramReminderTimestamp(iso, task.startMin, task.telegramReminderMin),
+      telegramReminderSentAt: undefined,
       createdAt: Date.now(),
     }))
   if (!occurrences.length) return

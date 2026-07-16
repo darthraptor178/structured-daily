@@ -16,6 +16,9 @@ create table public.tasks (
   done boolean not null default false,
   recurrence jsonb,
   recurrence_parent_id text references public.tasks (id) on delete cascade,
+  telegram_reminder_min int check (telegram_reminder_min between 0 and 1440),
+  telegram_remind_at bigint,
+  telegram_reminder_sent_at bigint,
   created_at bigint not null
 );
 
@@ -60,3 +63,14 @@ create policy "mark received messages read"
 -- ── Realtime ─────────────────────────────────────────────────
 alter publication supabase_realtime add table public.tasks;
 alter publication supabase_realtime add table public.messages;
+
+-- Telegram delivery destination (one private chat per account)
+create table public.telegram_settings (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  chat_id text not null,
+  enabled boolean not null default true,
+  updated_at timestamptz not null default now()
+);
+alter table public.telegram_settings enable row level security;
+create policy "manage own telegram settings" on public.telegram_settings
+  for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());

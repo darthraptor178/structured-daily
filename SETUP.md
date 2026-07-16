@@ -57,6 +57,16 @@ Copy `app/.env.example` to `app/.env.local`, fill in the same two values, restar
 
 Edit `app/src/config.ts` → change `FRIEND_NAME = 'Friend'` to her name → push.
 
+## 7. Telegram reminders (optional)
+
+1. Create a bot with Telegram's **@BotFather** and copy its token.
+2. In Supabase **Project Settings â†’ Vault**, create a secret named
+   `telegram_bot_token` containing that token.
+3. Run `supabase/migrations/20260716_enable_telegram_task_reminders.sql` in the
+   SQL Editor to enable the one-minute delivery job.
+4. Send `/start` to the bot. In the app's Settings, enter your numeric Telegram
+   chat ID. Tasks can then opt into a reminder from their editor.
+
 ## Done
 
 - She opens the site URL on her phone, signs in with the credentials you gave her,

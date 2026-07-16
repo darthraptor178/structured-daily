@@ -27,6 +27,10 @@ export interface Task {
   /** Only set on the template task; occurrences are independent tasks. */
   recurrence?: Recurrence
   recurrenceParentId?: string
+  /** Optional Telegram reminder lead time in minutes (0 = at start). */
+  telegramReminderMin?: number
+  telegramRemindAt?: number
+  telegramReminderSentAt?: number
 }
 
 export interface ChatMessage {

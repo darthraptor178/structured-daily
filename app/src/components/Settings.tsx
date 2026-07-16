@@ -1,7 +1,33 @@
+import { useEffect, useState } from 'react'
 import { db } from '../db'
 import { supabase, cloudEnabled } from '../supabase'
 
 export default function Settings() {
+  const [telegramChatId, setTelegramChatId] = useState('')
+  const [telegramSaved, setTelegramSaved] = useState(false)
+  const [telegramBusy, setTelegramBusy] = useState(false)
+
+  useEffect(() => {
+    if (!supabase) return
+    const client = supabase
+    client.auth.getUser().then(async ({ data }) => {
+      if (!data.user) return
+      const { data: settings } = await client.from('telegram_settings').select('chat_id').eq('user_id', data.user.id).maybeSingle()
+      if (settings?.chat_id) { setTelegramChatId(settings.chat_id); setTelegramSaved(true) }
+    })
+  }, [])
+
+  const saveTelegram = async () => {
+    if (!supabase || !telegramChatId.trim()) return
+    setTelegramBusy(true)
+    const { data } = await supabase.auth.getUser()
+    if (data.user) {
+      const { error } = await supabase.from('telegram_settings').upsert({ user_id: data.user.id, chat_id: telegramChatId.trim(), enabled: true })
+      if (!error) setTelegramSaved(true)
+      else alert(error.message)
+    }
+    setTelegramBusy(false)
+  }
   const signOut = async () => {
     await supabase!.auth.signOut()
     await db.tasks.clear()
@@ -64,6 +90,22 @@ export default function Settings() {
             <div className="r-sub">Removes everything stored on this device</div>
           </div>
           <button className="pill" style={{ color: 'var(--danger)' }} onClick={clearAll}>Clear</button>
+        </div>
+      </div>
+
+      <div className="settings-group">
+        <div className="field-label">Notifications</div>
+        <div className="settings-row telegram-settings-row">
+          <div>
+            <div className="r-label">Telegram reminders</div>
+            <div className="r-sub">Send /start to your Structured Daily bot, then enter your numeric Telegram chat ID.</div>
+          </div>
+          {cloudEnabled ? (
+            <div className="telegram-connect">
+              <input value={telegramChatId} onChange={(e) => { setTelegramChatId(e.target.value.replace(/[^\d-]/g, '')); setTelegramSaved(false) }} placeholder="Chat ID" inputMode="numeric" />
+              <button className={`pill ${telegramSaved ? 'telegram-ok' : ''}`} onClick={saveTelegram} disabled={telegramBusy || !telegramChatId.trim()}>{telegramBusy ? 'Saving…' : telegramSaved ? 'Connected' : 'Connect'}</button>
+            </div>
+          ) : <span className="pill">Cloud required</span>}
         </div>
       </div>
 

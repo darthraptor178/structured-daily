@@ -31,6 +31,9 @@ type TaskRow = {
   created_at: number
   recurrence?: Recurrence | null
   recurrence_parent_id?: string | null
+  telegram_reminder_min?: number | null
+  telegram_remind_at?: number | null
+  telegram_reminder_sent_at?: number | null
 }
 type MessageRow = { id: string; sender: string; text: string; at: number; read_at?: number | null }
 
@@ -49,6 +52,9 @@ const toLocalTask = (r: TaskRow): Task => ({
   createdAt: r.created_at,
   recurrence: r.recurrence ?? undefined,
   recurrenceParentId: r.recurrence_parent_id ?? undefined,
+  telegramReminderMin: r.telegram_reminder_min ?? undefined,
+  telegramRemindAt: r.telegram_remind_at ?? undefined,
+  telegramReminderSentAt: r.telegram_reminder_sent_at ?? undefined,
 })
 
 const toRowTask = (t: Task): TaskRow => ({
@@ -66,6 +72,9 @@ const toRowTask = (t: Task): TaskRow => ({
   created_at: t.createdAt,
   recurrence: t.recurrence ?? null,
   recurrence_parent_id: t.recurrenceParentId ?? null,
+  telegram_reminder_min: t.telegramReminderMin ?? null,
+  telegram_remind_at: t.telegramRemindAt ?? null,
+  telegram_reminder_sent_at: t.telegramReminderSentAt ?? null,
 })
 
 const toLocalMsg = (r: MessageRow): ChatMessage => ({

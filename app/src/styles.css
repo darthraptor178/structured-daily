@@ -616,6 +616,8 @@ textarea.notes:focus { outline: none; border-color: var(--accent); }
 .repeat-days { display: flex; gap: 7px; margin-top: 10px; }
 .repeat-days button { width: 30px; height: 30px; border-radius: 50%; color: var(--text-2); background: var(--surface-3); font-size: 12px; font-weight: 700; }
 .repeat-days button.on { color: white; background: var(--accent); box-shadow: 0 3px 10px rgba(108, 92, 231, 0.35); }
+.telegram-help { display: flex; align-items: center; gap: 5px; margin-top: 9px; color: var(--text-2); font-size: 12px; }
+.telegram-help .msym { font-size: 14px; color: var(--accent-text); }
 
 .sheet-footer {
   display: flex;
@@ -830,6 +832,12 @@ textarea.notes:focus { outline: none; border-color: var(--accent); }
 .settings-row:only-of-type { border-radius: 12px; }
 .settings-row .r-label { font-weight: 500; }
 .settings-row .r-sub { font-size: 12.5px; color: var(--text-2); margin-top: 2px; }
+.telegram-settings-row { gap: 20px; }
+.telegram-connect { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+.telegram-connect input { width: 142px; padding: 8px 10px; border-radius: 9px; border: 1px solid var(--line-strong); background: var(--surface-3); font-size: 13px; }
+.telegram-connect input:focus { outline: none; border-color: var(--accent); }
+.pill.telegram-ok { color: var(--online); }
+@media (max-width: 560px) { .telegram-settings-row { align-items: flex-start; flex-direction: column; } .telegram-connect { width: 100%; } .telegram-connect input { flex: 1; width: auto; } }
 
 /* ─── Pickers (date / time popovers) ────────────────────────── */
 .pop-wrap { position: relative; display: inline-block; }

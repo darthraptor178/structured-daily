@@ -4,6 +4,7 @@ import { TASK_COLORS, QUICK_ICONS, fmtTime, MAX_DURATION } from '../types'
 import { db } from '../db'
 import { DatePicker, TimePicker } from './pickers'
 import { parseSmartTask } from '../taskInput'
+import { telegramReminderTimestamp } from '../telegram'
 
 const DURATIONS = [15, 30, 45, 60, 90, 120, 180, 240]
 
@@ -31,7 +32,13 @@ export default function TaskSheet({ task, isNew, onClose }: Props) {
   }
 
   const save = async () => {
-    const final = { ...draft, title: draft.title.trim() || 'Untitled' }
+    const telegramRemindAt = telegramReminderTimestamp(draft.date, draft.startMin, draft.telegramReminderMin)
+    const final = {
+      ...draft,
+      title: draft.title.trim() || 'Untitled',
+      telegramRemindAt,
+      telegramReminderSentAt: telegramRemindAt === task.telegramRemindAt ? draft.telegramReminderSentAt : undefined,
+    }
     if (newSub.trim()) final.subtasks = [...final.subtasks, { text: newSub.trim(), done: false }]
     await db.tasks.put(final)
     onClose()
@@ -164,6 +171,28 @@ export default function TaskSheet({ task, isNew, onClose }: Props) {
                   })}
                 </div>
               )}
+            </div>
+          )}
+
+          {!isInbox && !isAllDay && (
+            <div>
+              <div className="field-label"><span className="msym" style={{ fontSize: 16 }}>send</span> Telegram reminder</div>
+              <div className="seg-row">
+                {[
+                  { label: 'Off', value: undefined },
+                  { label: 'At start', value: 0 },
+                  { label: '5m before', value: 5 },
+                  { label: '10m before', value: 10 },
+                  { label: '15m before', value: 15 },
+                  { label: '30m before', value: 30 },
+                  { label: '1h before', value: 60 },
+                ].map((option) => (
+                  <button key={option.label} type="button" className={`seg ${draft.telegramReminderMin === option.value ? 'on' : ''}`} onClick={() => set({ telegramReminderMin: option.value, telegramReminderSentAt: undefined })}>
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              {draft.telegramReminderMin !== undefined && <div className="telegram-help"><span className="msym">lock</span> Sent privately through your connected Telegram bot.</div>}
             </div>
           )}
 
