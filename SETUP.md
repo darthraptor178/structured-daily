@@ -71,17 +71,20 @@ Edit `app/src/config.ts` → change `FRIEND_NAME = 'Friend'` to her name → pus
 
 The app always includes an on-device quick planner for common duration and time
 phrases. For more flexible natural-language planning, deploy the `plan-day` Edge
-Function and add a Gemini API key as a Supabase Edge Function secret:
+Function. Each user can have a separate Gemini API key stored in Supabase Vault
+under `gemini_api_key_<auth user id>`. Apply the AI planner migration before
+deploying the function:
 
 ```bash
-supabase secrets set GEMINI_API_KEY=your_key --project-ref your_project_ref
+supabase db push --project-ref your_project_ref
 supabase functions deploy plan-day --project-ref your_project_ref
 ```
 
-Create the key in Google AI Studio and keep it out of the Vite environment and
-Git. The function uses `gemini-2.5-flash-lite`, which has a free API tier with
-usage limits. Requests on the free tier may be used by Google to improve its
-products, so only enable it if that data handling is acceptable.
+Create keys in Google AI Studio and keep their values out of the Vite environment,
+Git, and migration files. The function authenticates the caller and retrieves
+only that user's encrypted Vault key. It uses `gemini-2.5-flash-lite`, which has
+a free API tier with usage limits. Requests on the free tier may be used by Google
+to improve its products, so only enable it if that data handling is acceptable.
 
 ## Done
 

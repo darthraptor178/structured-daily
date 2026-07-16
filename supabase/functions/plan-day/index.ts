@@ -1,4 +1,5 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
+import { createClient } from 'jsr:@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -36,8 +37,21 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
 
-  const apiKey = Deno.env.get('GEMINI_API_KEY')
-  if (!apiKey) return json({ error: 'AI planning is not configured', code: 'AI_NOT_CONFIGURED' }, 503)
+  const authHeader = req.headers.get('Authorization') ?? ''
+  const token = authHeader.replace(/^Bearer\s+/i, '')
+  if (!token) return json({ error: 'Sign in to use AI planning' }, 401)
+
+  const projectUrl = Deno.env.get('SUPABASE_URL')!
+  const userClient = createClient(projectUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
+    global: { headers: { Authorization: authHeader } },
+    auth: { persistSession: false },
+  })
+  const { data: { user }, error: userError } = await userClient.auth.getUser(token)
+  if (userError || !user) return json({ error: 'Your session is no longer valid' }, 401)
+
+  const admin = createClient(projectUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } })
+  const { data: apiKey, error: keyError } = await admin.rpc('planner_api_key', { p_user_id: user.id })
+  if (keyError || !apiKey) return json({ error: 'AI planning is not configured for this account', code: 'AI_NOT_CONFIGURED' }, 503)
 
   let body: Record<string, unknown>
   try {
@@ -75,7 +89,7 @@ Rules:
 User description:
 ${text}`
 
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${encodeURIComponent(apiKey)}`, {
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${encodeURIComponent(String(apiKey))}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
