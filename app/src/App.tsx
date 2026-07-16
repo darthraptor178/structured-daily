@@ -223,6 +223,7 @@ export default function App() {
               onToggle={(t) => db.tasks.update(t.id, { done: !t.done })}
               onMove={(t, startMin) => db.tasks.update(t.id, { startMin })}
               onResize={(t, durationMin) => db.tasks.update(t.id, { durationMin })}
+              onDelete={(t) => db.tasks.delete(t.id)}
               onGapTap={(min) => openNew(min)}
             />
           </>

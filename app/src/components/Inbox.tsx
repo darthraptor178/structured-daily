@@ -61,6 +61,9 @@ export default function Inbox({ onEdit, onSchedule }: Props) {
             <button className="iconbtn" title="Edit" onClick={() => onEdit(t)}>
               <span className="msym">edit</span>
             </button>
+            <button className="iconbtn" title="Delete" aria-label={`Delete ${t.title}`} onClick={() => db.tasks.delete(t.id)}>
+              <span className="msym">delete</span>
+            </button>
           </div>
         </div>
       ))}

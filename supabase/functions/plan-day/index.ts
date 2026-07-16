@@ -81,6 +81,7 @@ Rules:
 - Preserve the user's task order and every explicit fixed time.
 - Schedule flexible tasks consecutively from the default start, moving them into free gaps around fixed events.
 - Resolve today/tomorrow relative to the selected date.
+- If the description says "tomorrow" and does not also say "today", assign every requested task to the next calendar day (selected date + 1), even when no clock time is provided.
 - A range such as "6-8 presentation" normally means 6 PM to 8 PM unless morning context says otherwise.
 - Infer a sensible duration only when missing; default to 45 minutes.
 - Never exceed 240 minutes for one task. Split clearly separate activities into separate tasks.

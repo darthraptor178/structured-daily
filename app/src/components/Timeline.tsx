@@ -14,6 +14,7 @@ interface Props {
   onToggle?: (t: Task) => void
   onMove?: (t: Task, startMin: number) => void
   onResize?: (t: Task, durationMin: number) => void
+  onDelete?: (t: Task) => void
   onGapTap?: (startMin: number) => void
 }
 
@@ -57,7 +58,7 @@ interface DragState {
   delta: number
 }
 
-export default function Timeline({ tasks, date, readonly, onEdit, onToggle, onMove, onResize, onGapTap }: Props) {
+export default function Timeline({ tasks, date, readonly, onEdit, onToggle, onMove, onResize, onDelete, onGapTap }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const [drag, setDrag] = useState<DragState | null>(null)
   const [nowMin, setNowMin] = useState(() => new Date().getHours() * 60 + new Date().getMinutes())
@@ -195,6 +196,7 @@ export default function Timeline({ tasks, date, readonly, onEdit, onToggle, onMo
                   </button>
                 )}
                 <span className="tb-title">{t.icon} {t.title || 'Untitled'}</span>
+                {!readonly && <button className="tb-delete" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onDelete?.(t) }} aria-label={`Delete ${t.title || 'task'}`} title="Delete task"><span className="msym">delete</span></button>}
               </div>
               {height >= 52 && (
                 <div className="tb-meta" style={{ marginLeft: readonly ? 0 : 27 }}>

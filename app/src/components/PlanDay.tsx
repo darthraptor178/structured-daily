@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Task } from '../types'
-import { fmtRange, uid } from '../types'
+import { fmtRange, shiftISO, uid } from '../types'
 import { db } from '../db'
 import { cloudEnabled, supabase } from '../supabase'
 import { normalizeAIPlan, planDayLocally, type PlannedTask } from '../planner'
@@ -42,7 +42,15 @@ export default function PlanDay({ date, defaultStart, existingTasks, onClose }: 
           existingTasks: existingTasks.filter((task) => task.startMin !== null).map(({ title, date: taskDate, startMin, durationMin }) => ({ title, date: taskDate, startMin, durationMin })),
         },
       })
-      if (!error) next = normalizeAIPlan(data, date, existingTasks)
+      if (!error) {
+        next = normalizeAIPlan(data, date, existingTasks)
+        // Guard against an AI response that drops the relative-day word. If the
+        // request is explicitly for tomorrow and every returned task landed on
+        // the selected date, move the whole plan forward one day.
+        if (/\btomorrow\b/i.test(input) && !/\btoday\b/i.test(input) && next.length && next.every((task) => task.date === date)) {
+          next = next.map((task) => ({ ...task, date: shiftISO(date, 1) }))
+        }
+      }
       else {
         aiFailure = 'The AI service could not make a plan'
         try {
@@ -127,6 +135,9 @@ export default function PlanDay({ date, defaultStart, existingTasks, onClose }: 
                     <div className="planner-time">{fmtRange(task.startMin, task.durationMin)} · {task.durationMin} min</div>
                   </div>
                   {task.conflict && <span className="planner-conflict" title="Overlaps another task">Overlap</span>}
+                  <button className="iconbtn sm" onClick={() => setPlan((items) => items.filter((item) => item.id !== task.id))} aria-label={`Delete ${task.title}`} title="Delete task">
+                    <span className="msym">delete</span>
+                  </button>
                 </article>
               ))}
             </div>
