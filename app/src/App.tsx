@@ -16,6 +16,7 @@ import { supabase, cloudEnabled } from './supabase'
 import { startSync, presenceStore } from './sync'
 import { materializeRecurringForDate } from './recurrence'
 import { DatePicker } from './components/pickers'
+import PlanDay from './components/PlanDay'
 
 type Tab = 'day' | 'inbox' | 'friend' | 'chat' | 'settings'
 
@@ -47,6 +48,7 @@ export default function App() {
   const [date, setDate] = useState(todayISO)
   const [editing, setEditing] = useState<{ task: Task; isNew: boolean } | null>(null)
   const [focusOpen, setFocusOpen] = useState(false)
+  const [plannerOpen, setPlannerOpen] = useState(false)
   const [session, setSession] = useState<Session | null>(null)
   const [authReady, setAuthReady] = useState(!cloudEnabled)
   const friendOnline = useSyncExternalStore(presenceStore.subscribe, presenceStore.isFriendOnline)
@@ -159,6 +161,12 @@ export default function App() {
                   {liveNow && <span className="live-dot" />}
                 </button>
               )}
+              {tab === 'day' && (
+                <button className="pill planner-pill" onClick={() => setPlannerOpen(true)}>
+                  <span className="msym fill" style={{ fontSize: 16 }}>auto_awesome</span>
+                  Plan with AI
+                </button>
+              )}
               {!isToday && (
                 <button className="pill accent" onClick={() => setDate(todayISO())}>
                   Back to today
@@ -269,6 +277,15 @@ export default function App() {
       </nav>
 
       {focusOpen && <FocusNow onClose={() => setFocusOpen(false)} />}
+
+      {plannerOpen && (
+        <PlanDay
+          date={date}
+          defaultStart={9 * 60}
+          existingTasks={dayTasks ?? []}
+          onClose={() => setPlannerOpen(false)}
+        />
+      )}
 
       {editing && (
         <TaskSheet

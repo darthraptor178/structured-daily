@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "test:planner": "node scripts/test-planner.cjs",
     "preview": "vite preview"
   },
   "dependencies": {

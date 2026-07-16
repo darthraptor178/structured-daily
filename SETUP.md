@@ -67,6 +67,22 @@ Edit `app/src/config.ts` → change `FRIEND_NAME = 'Friend'` to her name → pus
 4. Send `/start` to the bot. In the app's Settings, enter your numeric Telegram
    chat ID. Tasks can then opt into a reminder from their editor.
 
+## 8. AI day planning (optional free model)
+
+The app always includes an on-device quick planner for common duration and time
+phrases. For more flexible natural-language planning, deploy the `plan-day` Edge
+Function and add a Gemini API key as a Supabase Edge Function secret:
+
+```bash
+supabase secrets set GEMINI_API_KEY=your_key --project-ref your_project_ref
+supabase functions deploy plan-day --project-ref your_project_ref
+```
+
+Create the key in Google AI Studio and keep it out of the Vite environment and
+Git. The function uses `gemini-2.5-flash-lite`, which has a free API tier with
+usage limits. Requests on the free tier may be used by Google to improve its
+products, so only enable it if that data handling is acceptable.
+
 ## Done
 
 - She opens the site URL on her phone, signs in with the credentials you gave her,
