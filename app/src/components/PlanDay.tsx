@@ -20,6 +20,8 @@ export default function PlanDay({ date, defaultStart, existingTasks, onClose }: 
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [notice, setNotice] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const selectedCount = useMemo(() => plan.filter((task) => task.selected).length, [plan])
 
   useEffect(() => {
@@ -30,6 +32,14 @@ export default function PlanDay({ date, defaultStart, existingTasks, onClose }: 
 
   const makePlan = async () => {
     if (!input.trim()) return
+    const deleteMatch = /^\s*(?:delete|remove|clear)\s+(?:all\s+)?(?:my\s+)?tasks?(?:\s+for\s+(today|tomorrow))?\s*[.!]?\s*$/i.exec(input)
+    if (deleteMatch) {
+      const targetDate = deleteMatch[1]?.toLowerCase() === 'tomorrow' ? shiftISO(date, 1) : date
+      setDeleteTarget(targetDate)
+      setPlan([])
+      setNotice('')
+      return
+    }
     setLoading(true)
     setNotice('')
     let next: PlannedTask[] = []
@@ -67,6 +77,17 @@ export default function PlanDay({ date, defaultStart, existingTasks, onClose }: 
     }
     setPlan(next)
     setLoading(false)
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    const tasks = await db.tasks.where('date').equals(deleteTarget).filter((task) => task.userId === 'me').toArray()
+    await db.tasks.bulkDelete(tasks.map((task) => task.id))
+    setDeleting(false)
+    setDeleteTarget(null)
+    setInput('')
+    setNotice(`${tasks.length} task${tasks.length === 1 ? '' : 's'} deleted.`)
   }
 
   const update = (id: string, patch: Partial<PlannedTask>) => {
@@ -120,7 +141,17 @@ export default function PlanDay({ date, defaultStart, existingTasks, onClose }: 
 
         {notice && <div className="planner-notice"><span className="msym">info</span>{notice}</div>}
 
-        {plan.length > 0 ? (
+        {deleteTarget ? (
+          <div className="planner-delete-confirm">
+            <span className="msym fill">delete_sweep</span>
+            <strong>Delete all tasks for {deleteTarget === date ? 'this day' : 'tomorrow'}?</strong>
+            <p>This removes only your tasks on that date and cannot be undone.</p>
+            <div className="planner-delete-actions">
+              <button className="btn" onClick={() => setDeleteTarget(null)}>Cancel</button>
+              <button className="btn ghost-danger" disabled={deleting} onClick={confirmDelete}>{deleting ? 'Deleting…' : 'Delete tasks'}</button>
+            </div>
+          </div>
+        ) : plan.length > 0 ? (
           <div className="planner-review">
             <div className="planner-review-head"><strong>Review your day</strong><span>{selectedCount} of {plan.length} selected</span></div>
             <div className="planner-list">
